@@ -3,16 +3,16 @@
 #include <time.h>
 
 #define CAPACIDADE_FILA 5
-#define CAPACIDADE_PILHA 3 // Nova capacidade para a reserva
+#define CAPACIDADE_PILHA 3 
 
 // Desafio Tetris Stack
 // Tema 3 - Integração de Fila e Pilha
 // Este código inicial serve como base para o desenvolvimento do sistema de controle de peças.
 // Use as instruções de cada nível para desenvolver o desafio.
 
-// --- Estruturas (Nível Novato e Aventureiro) ---
+// --- Estruturas (Nível Novato, Aventureiro e Mestre) ---
 typedef struct {
-    char tipo;
+    char nome; // Caractere que representa a peça ('I', 'O', 'T', 'L')
     int id;
 } Peca;
 
@@ -48,7 +48,7 @@ Peca pop(Pilha *p);
 void mostrarPilha(Pilha *p);
 
 // Funções Gerais
-char sortearTipoTetris();
+Peca gerarPeca(int *proximo_id); // Nova função exigida pelo Nível Mestre
 void limparBuffer();
 
 
@@ -68,23 +68,18 @@ int main() {
     
     srand(time(NULL)); // Garante peças aleatórias em cada partida
 
-    // Inicialização da Fila
     Fila filaProximas;
     inicializarFila(&filaProximas);
     
-    // Inicialização da Pilha
     Pilha pilhaReserva;
     inicializarPilha(&pilhaReserva);
     
     int proximo_id = 1; 
     int opcao;
 
-    // Preenche a fila inicial com 5 peças
+    // Preenche a fila inicial com 5 peças usando a nova função gerarPeca
     while (filaCheia(&filaProximas) == 0) {
-        Peca novaPeca;
-        novaPeca.tipo = sortearTipoTetris();
-        novaPeca.id = proximo_id++;
-        enqueue(&filaProximas, novaPeca);
+        enqueue(&filaProximas, gerarPeca(&proximo_id));
     }
 
     do {
@@ -99,6 +94,8 @@ int main() {
         printf("1 - Jogar peca (Remover da frente)\n");
         printf("2 - Enviar peca da fila para a reserva (Pilha)\n");
         printf("3 - Usar peca da reserva (Remover do topo da pilha)\n");
+        printf("4 - Trocar peca da frente com topo da pilha\n");
+        printf("5 - Trocar 3 primeiros da fila com os 3 da pilha\n");
         printf("0 - Sair\n");
         printf("Escolha: ");
         
@@ -108,18 +105,13 @@ int main() {
         switch (opcao) {
             case 1:
                 if (filaVazia(&filaProximas) == 0) {
-                    // Remove a peça da frente
                     Peca pecaJogada = dequeue(&filaProximas);
-                    printf("\n>>> Peca Jogada: [%c] (ID: %d) caiu no tabuleiro! <<<\n", pecaJogada.tipo, pecaJogada.id);
+                    printf("\n>>> Peca Jogada: [%c] (ID: %d) caiu no tabuleiro! <<<\n", pecaJogada.nome, pecaJogada.id);
 
-                    // Gera uma nova peça para o final da fila
-                    Peca novaPeca;
-                    novaPeca.tipo = sortearTipoTetris();
-                    novaPeca.id = proximo_id++;
-                    
-                    // Insere a nova peça
+                    // Repõe a fila para manter sempre 5 peças
+                    Peca novaPeca = gerarPeca(&proximo_id);
                     enqueue(&filaProximas, novaPeca);
-                    printf("Uma nova peca [%c] (ID: %d) entrou no final da fila.\n", novaPeca.tipo, novaPeca.id);
+                    printf("Uma nova peca [%c] (ID: %d) entrou no final da fila.\n", novaPeca.nome, novaPeca.id);
                 }
                 printf("\nPressione Enter para continuar...");
                 getchar();
@@ -130,14 +122,12 @@ int main() {
                 if (filaVazia(&filaProximas) == 0 && pilhaCheia(&pilhaReserva) == 0) {
                     Peca pecaMover = dequeue(&filaProximas);
                     push(&pilhaReserva, pecaMover);
-                    printf("\n>>> Peca [%c] (ID: %d) enviada para a Reserva! <<<\n", pecaMover.tipo, pecaMover.id);
+                    printf("\n>>> Peca [%c] (ID: %d) enviada para a Reserva! <<<\n", pecaMover.nome, pecaMover.id);
 
-                    // Repondo a fila com uma nova peça gerada para manter 5 itens
-                    Peca novaPeca;
-                    novaPeca.tipo = sortearTipoTetris();
-                    novaPeca.id = proximo_id++;
+                    // Repõe a fila para manter sempre 5 peças
+                    Peca novaPeca = gerarPeca(&proximo_id);
                     enqueue(&filaProximas, novaPeca);
-                    printf("A fila foi reposta com a peca [%c] (ID: %d).\n", novaPeca.tipo, novaPeca.id);
+                    printf("A fila foi reposta com a peca [%c] (ID: %d).\n", novaPeca.nome, novaPeca.id);
                 } else {
                     printf("\nErro: Pilha de reserva cheia ou fila vazia!\n");
                 }
@@ -149,9 +139,45 @@ int main() {
                 // 🧠 Nível Aventureiro: Usar da Reserva (Remover da Pilha)
                 if (pilhaVazia(&pilhaReserva) == 0) {
                     Peca pecaUsada = pop(&pilhaReserva);
-                    printf("\n>>> Peca da Reserva Jogada: [%c] (ID: %d) caiu no tabuleiro! <<<\n", pecaUsada.tipo, pecaUsada.id);
+                    printf("\n>>> Peca da Reserva Jogada: [%c] (ID: %d) caiu no tabuleiro! <<<\n", pecaUsada.nome, pecaUsada.id);
                 } else {
                     printf("\nErro: A reserva (pilha) ja esta vazia!\n");
+                }
+                printf("\nPressione Enter para continuar...");
+                getchar();
+                break;
+
+            case 4:
+                // 🔄 Nível Mestre: Trocar peça da frente com topo da pilha
+                if (filaVazia(&filaProximas) == 0 && pilhaVazia(&pilhaReserva) == 0) {
+                    // Realiza a troca direta nos arrays
+                    Peca temp = filaProximas.itens[filaProximas.inicio];
+                    filaProximas.itens[filaProximas.inicio] = pilhaReserva.itens[pilhaReserva.topo];
+                    pilhaReserva.itens[pilhaReserva.topo] = temp;
+                    
+                    printf("\n>>> Troca simples realizada com sucesso! <<<\n");
+                } else {
+                    printf("\nErro: Para fazer a troca, a fila nao pode estar vazia e a pilha deve ter ao menos 1 peca!\n");
+                }
+                printf("\nPressione Enter para continuar...");
+                getchar();
+                break;
+
+            case 5:
+                // 🔄 Nível Mestre: Trocar 3 primeiros da fila com os 3 da pilha
+                if (filaProximas.quantidade >= 3 && pilhaCheia(&pilhaReserva) == 1) {
+                    // Loop para trocar os 3 elementos simultaneamente
+                    for (int i = 0; i < 3; i++) {
+                        int indexFila = (filaProximas.inicio + i) % CAPACIDADE_FILA;
+                        int indexPilha = pilhaReserva.topo - i; // Vai pegando do topo(2) até a base(0)
+                        
+                        Peca temp = filaProximas.itens[indexFila];
+                        filaProximas.itens[indexFila] = pilhaReserva.itens[indexPilha];
+                        pilhaReserva.itens[indexPilha] = temp;
+                    }
+                    printf("\n>>> Troca multipla de 3 pecas realizada com sucesso! <<<\n");
+                } else {
+                    printf("\nErro: A fila precisa ter pelo menos 3 pecas e a pilha deve estar completamente cheia (3 pecas)!\n");
                 }
                 printf("\nPressione Enter para continuar...");
                 getchar();
@@ -212,16 +238,16 @@ void inicializarFila(Fila *f) {
 
 int filaCheia(Fila *f) {
     if (f->quantidade == CAPACIDADE_FILA) {
-        return 1; // Verdadeiro
+        return 1; 
     }
-    return 0; // Falso
+    return 0; 
 }
 
 int filaVazia(Fila *f) {
     if (f->quantidade == 0) {
-        return 1; // Verdadeiro
+        return 1; 
     }
-    return 0; // Falso
+    return 0; 
 }
 
 void enqueue(Fila *f, Peca p) {
@@ -230,7 +256,7 @@ void enqueue(Fila *f, Peca p) {
         return;
     }
     f->itens[f->fim] = p;
-    f->fim = (f->fim + 1) % CAPACIDADE_FILA; // Logica da Fila Circular
+    f->fim = (f->fim + 1) % CAPACIDADE_FILA; 
     f->quantidade++;
 }
 
@@ -242,7 +268,7 @@ Peca dequeue(Fila *f) {
     }
     
     pecaRemovida = f->itens[f->inicio];
-    f->inicio = (f->inicio + 1) % CAPACIDADE_FILA; // Logica da Fila Circular
+    f->inicio = (f->inicio + 1) % CAPACIDADE_FILA; 
     f->quantidade--;
     
     return pecaRemovida;
@@ -254,7 +280,7 @@ void mostrarFila(Fila *f) {
     
     for (int i = 0; i < f->quantidade; i++) {
         int index = (f->inicio + i) % CAPACIDADE_FILA;
-        printf("[%c|id:%d] ", f->itens[index].tipo, f->itens[index].id);
+        printf("[%c|id:%d] ", f->itens[index].nome, f->itens[index].id);
         
         if (i < f->quantidade - 1) {
             printf("- ");
@@ -268,7 +294,7 @@ void mostrarFila(Fila *f) {
 // ============================================================================
 
 void inicializarPilha(Pilha *p) {
-    p->topo = -1; // -1 indica que a pilha está vazia
+    p->topo = -1; 
 }
 
 int pilhaCheia(Pilha *p) {
@@ -313,7 +339,7 @@ void mostrarPilha(Pilha *p) {
         printf("(vazia) ");
     } else {
         for (int i = 0; i <= p->topo; i++) {
-            printf("[%c|id:%d] ", p->itens[i].tipo, p->itens[i].id);
+            printf("[%c|id:%d] ", p->itens[i].nome, p->itens[i].id);
             if (i < p->topo) {
                 printf("- ");
             }
@@ -323,13 +349,18 @@ void mostrarPilha(Pilha *p) {
 }
 
 // ============================================================================
-// --- Funções Gerais ---
+// --- Funções Gerais (Nível Mestre) ---
 // ============================================================================
 
-char sortearTipoTetris() {
-    char tipos[7] = {'I', 'J', 'L', 'O', 'S', 'T', 'Z'};
-    int indice = rand() % 7;
-    return tipos[indice];
+// A nova função automatizada para gerar peças conforme o requisito
+Peca gerarPeca(int *proximo_id) {
+    Peca p;
+    char nomes[4] = {'I', 'O', 'T', 'L'}; // O exercício restringiu para esses 4 tipos
+    
+    p.nome = nomes[rand() % 4];
+    p.id = (*proximo_id)++;
+    
+    return p;
 }
 
 void limparBuffer() {
