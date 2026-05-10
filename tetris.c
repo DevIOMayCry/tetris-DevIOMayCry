@@ -3,13 +3,14 @@
 #include <time.h>
 
 #define CAPACIDADE_FILA 5
+#define CAPACIDADE_PILHA 3 // Nova capacidade para a reserva
 
 // Desafio Tetris Stack
 // Tema 3 - Integração de Fila e Pilha
 // Este código inicial serve como base para o desenvolvimento do sistema de controle de peças.
 // Use as instruções de cada nível para desenvolver o desafio.
 
-// --- Estruturas (Nível Novato) ---
+// --- Estruturas (Nível Novato e Aventureiro) ---
 typedef struct {
     char tipo;
     int id;
@@ -23,13 +24,30 @@ typedef struct {
     int quantidade;
 } Fila;
 
+// Estrutura da Pilha Linear (Reserva)
+typedef struct {
+    Peca itens[CAPACIDADE_PILHA];
+    int topo;
+} Pilha;
+
 // --- Protótipos das Funções ---
+// Funções da Fila
 void inicializarFila(Fila *f);
-int filaCheia(Fila *f); // Retorna 1 (Sim) ou 0 (Não)
-int filaVazia(Fila *f); // Retorna 1 (Sim) ou 0 (Não)
+int filaCheia(Fila *f); 
+int filaVazia(Fila *f); 
 void enqueue(Fila *f, Peca p);
 Peca dequeue(Fila *f);
 void mostrarFila(Fila *f);
+
+// Funções da Pilha
+void inicializarPilha(Pilha *p);
+int pilhaCheia(Pilha *p);
+int pilhaVazia(Pilha *p);
+void push(Pilha *p, Peca p_nova);
+Peca pop(Pilha *p);
+void mostrarPilha(Pilha *p);
+
+// Funções Gerais
 char sortearTipoTetris();
 void limparBuffer();
 
@@ -50,8 +68,13 @@ int main() {
     
     srand(time(NULL)); // Garante peças aleatórias em cada partida
 
+    // Inicialização da Fila
     Fila filaProximas;
     inicializarFila(&filaProximas);
+    
+    // Inicialização da Pilha
+    Pilha pilhaReserva;
+    inicializarPilha(&pilhaReserva);
     
     int proximo_id = 1; 
     int opcao;
@@ -70,9 +93,12 @@ int main() {
         printf("========================================\n");
         
         mostrarFila(&filaProximas);
+        mostrarPilha(&pilhaReserva);
 
         printf("\n--- MENU DE ACOES ---\n");
         printf("1 - Jogar peca (Remover da frente)\n");
+        printf("2 - Enviar peca da fila para a reserva (Pilha)\n");
+        printf("3 - Usar peca da reserva (Remover do topo da pilha)\n");
         printf("0 - Sair\n");
         printf("Escolha: ");
         
@@ -99,6 +125,38 @@ int main() {
                 getchar();
                 break;
                 
+            case 2:
+                // 🧠 Nível Aventureiro: Adição da Pilha de Reserva (Mover para Pilha)
+                if (filaVazia(&filaProximas) == 0 && pilhaCheia(&pilhaReserva) == 0) {
+                    Peca pecaMover = dequeue(&filaProximas);
+                    push(&pilhaReserva, pecaMover);
+                    printf("\n>>> Peca [%c] (ID: %d) enviada para a Reserva! <<<\n", pecaMover.tipo, pecaMover.id);
+
+                    // Repondo a fila com uma nova peça gerada para manter 5 itens
+                    Peca novaPeca;
+                    novaPeca.tipo = sortearTipoTetris();
+                    novaPeca.id = proximo_id++;
+                    enqueue(&filaProximas, novaPeca);
+                    printf("A fila foi reposta com a peca [%c] (ID: %d).\n", novaPeca.tipo, novaPeca.id);
+                } else {
+                    printf("\nErro: Pilha de reserva cheia ou fila vazia!\n");
+                }
+                printf("\nPressione Enter para continuar...");
+                getchar();
+                break;
+
+            case 3:
+                // 🧠 Nível Aventureiro: Usar da Reserva (Remover da Pilha)
+                if (pilhaVazia(&pilhaReserva) == 0) {
+                    Peca pecaUsada = pop(&pilhaReserva);
+                    printf("\n>>> Peca da Reserva Jogada: [%c] (ID: %d) caiu no tabuleiro! <<<\n", pecaUsada.tipo, pecaUsada.id);
+                } else {
+                    printf("\nErro: A reserva (pilha) ja esta vazia!\n");
+                }
+                printf("\nPressione Enter para continuar...");
+                getchar();
+                break;
+
             case 0:
                 printf("\nEncerrando o jogo. Game Over!\n");
                 break;
@@ -204,6 +262,69 @@ void mostrarFila(Fila *f) {
     }
     printf("<- Fim\n");
 }
+
+// ============================================================================
+// --- Implementação das Funções (Nível Aventureiro) ---
+// ============================================================================
+
+void inicializarPilha(Pilha *p) {
+    p->topo = -1; // -1 indica que a pilha está vazia
+}
+
+int pilhaCheia(Pilha *p) {
+    if (p->topo == CAPACIDADE_PILHA - 1) {
+        return 1;
+    }
+    return 0;
+}
+
+int pilhaVazia(Pilha *p) {
+    if (p->topo == -1) {
+        return 1;
+    }
+    return 0;
+}
+
+void push(Pilha *p, Peca p_nova) {
+    if (pilhaCheia(p) == 1) {
+        printf("Erro: Pilha cheia!\n");
+        return;
+    }
+    p->topo++;
+    p->itens[p->topo] = p_nova;
+}
+
+Peca pop(Pilha *p) {
+    Peca pecaRemovida = {' ', -1};
+    if (pilhaVazia(p) == 1) {
+        printf("Erro: Pilha vazia!\n");
+        return pecaRemovida;
+    }
+    pecaRemovida = p->itens[p->topo];
+    p->topo--;
+    return pecaRemovida;
+}
+
+void mostrarPilha(Pilha *p) {
+    printf("[ PILHA DE RESERVA ]   -> (Capacidade: %d/%d)\n", p->topo + 1, CAPACIDADE_PILHA);
+    printf("Base -> ");
+    
+    if (pilhaVazia(p) == 1) {
+        printf("(vazia) ");
+    } else {
+        for (int i = 0; i <= p->topo; i++) {
+            printf("[%c|id:%d] ", p->itens[i].tipo, p->itens[i].id);
+            if (i < p->topo) {
+                printf("- ");
+            }
+        }
+    }
+    printf("<- Topo\n");
+}
+
+// ============================================================================
+// --- Funções Gerais ---
+// ============================================================================
 
 char sortearTipoTetris() {
     char tipos[7] = {'I', 'J', 'L', 'O', 'S', 'T', 'Z'};
