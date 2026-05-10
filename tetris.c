@@ -1,9 +1,38 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+#define CAPACIDADE_FILA 5
 
 // Desafio Tetris Stack
 // Tema 3 - Integração de Fila e Pilha
 // Este código inicial serve como base para o desenvolvimento do sistema de controle de peças.
 // Use as instruções de cada nível para desenvolver o desafio.
+
+// --- Estruturas (Nível Novato) ---
+typedef struct {
+    char tipo;
+    int id;
+} Peca;
+
+// Estrutura da Fila Circular
+typedef struct {
+    Peca itens[CAPACIDADE_FILA];
+    int inicio;
+    int fim;
+    int quantidade;
+} Fila;
+
+// --- Protótipos das Funções ---
+void inicializarFila(Fila *f);
+int filaCheia(Fila *f); // Retorna 1 (Sim) ou 0 (Não)
+int filaVazia(Fila *f); // Retorna 1 (Sim) ou 0 (Não)
+void enqueue(Fila *f, Peca p);
+Peca dequeue(Fila *f);
+void mostrarFila(Fila *f);
+char sortearTipoTetris();
+void limparBuffer();
+
 
 int main() {
 
@@ -18,7 +47,67 @@ int main() {
     //      1 - Jogar peça (remover da frente)
     //      0 - Sair
     // - A cada remoção, insira uma nova peça ao final da fila.
+    
+    srand(time(NULL)); // Garante peças aleatórias em cada partida
 
+    Fila filaProximas;
+    inicializarFila(&filaProximas);
+    
+    int proximo_id = 1; 
+    int opcao;
+
+    // Preenche a fila inicial com 5 peças
+    while (filaCheia(&filaProximas) == 0) {
+        Peca novaPeca;
+        novaPeca.tipo = sortearTipoTetris();
+        novaPeca.id = proximo_id++;
+        enqueue(&filaProximas, novaPeca);
+    }
+
+    do {
+        printf("\n========================================\n");
+        printf("        TETRIS - CONTROLE DE PECAS      \n");
+        printf("========================================\n");
+        
+        mostrarFila(&filaProximas);
+
+        printf("\n--- MENU DE ACOES ---\n");
+        printf("1 - Jogar peca (Remover da frente)\n");
+        printf("0 - Sair\n");
+        printf("Escolha: ");
+        
+        scanf("%d", &opcao);
+        limparBuffer();
+
+        switch (opcao) {
+            case 1:
+                if (filaVazia(&filaProximas) == 0) {
+                    // Remove a peça da frente
+                    Peca pecaJogada = dequeue(&filaProximas);
+                    printf("\n>>> Peca Jogada: [%c] (ID: %d) caiu no tabuleiro! <<<\n", pecaJogada.tipo, pecaJogada.id);
+
+                    // Gera uma nova peça para o final da fila
+                    Peca novaPeca;
+                    novaPeca.tipo = sortearTipoTetris();
+                    novaPeca.id = proximo_id++;
+                    
+                    // Insere a nova peça
+                    enqueue(&filaProximas, novaPeca);
+                    printf("Uma nova peca [%c] (ID: %d) entrou no final da fila.\n", novaPeca.tipo, novaPeca.id);
+                }
+                printf("\nPressione Enter para continuar...");
+                getchar();
+                break;
+                
+            case 0:
+                printf("\nEncerrando o jogo. Game Over!\n");
+                break;
+                
+            default:
+                printf("\nOpcao invalida!\n");
+        }
+
+    } while (opcao != 0);
 
 
     // 🧠 Nível Aventureiro: Adição da Pilha de Reserva
@@ -50,7 +139,79 @@ int main() {
     //      4 - Trocar peça da frente com topo da pilha
     //      5 - Trocar 3 primeiros da fila com os 3 da pilha
 
-
     return 0;
 }
 
+// ============================================================================
+// --- Implementação das Funções (Nível Novato) ---
+// ============================================================================
+
+void inicializarFila(Fila *f) {
+    f->inicio = 0;
+    f->fim = 0;
+    f->quantidade = 0;
+}
+
+int filaCheia(Fila *f) {
+    if (f->quantidade == CAPACIDADE_FILA) {
+        return 1; // Verdadeiro
+    }
+    return 0; // Falso
+}
+
+int filaVazia(Fila *f) {
+    if (f->quantidade == 0) {
+        return 1; // Verdadeiro
+    }
+    return 0; // Falso
+}
+
+void enqueue(Fila *f, Peca p) {
+    if (filaCheia(f) == 1) {
+        printf("Erro: Fila cheia!\n");
+        return;
+    }
+    f->itens[f->fim] = p;
+    f->fim = (f->fim + 1) % CAPACIDADE_FILA; // Logica da Fila Circular
+    f->quantidade++;
+}
+
+Peca dequeue(Fila *f) {
+    Peca pecaRemovida = {' ', -1}; 
+    if (filaVazia(f) == 1) {
+        printf("Erro: Fila vazia!\n");
+        return pecaRemovida;
+    }
+    
+    pecaRemovida = f->itens[f->inicio];
+    f->inicio = (f->inicio + 1) % CAPACIDADE_FILA; // Logica da Fila Circular
+    f->quantidade--;
+    
+    return pecaRemovida;
+}
+
+void mostrarFila(Fila *f) {
+    printf("\n[ FILA DE PROXIMAS PECAS ] -> (Capacidade: %d/%d)\n", f->quantidade, CAPACIDADE_FILA);
+    printf("Inicio -> ");
+    
+    for (int i = 0; i < f->quantidade; i++) {
+        int index = (f->inicio + i) % CAPACIDADE_FILA;
+        printf("[%c|id:%d] ", f->itens[index].tipo, f->itens[index].id);
+        
+        if (i < f->quantidade - 1) {
+            printf("- ");
+        }
+    }
+    printf("<- Fim\n");
+}
+
+char sortearTipoTetris() {
+    char tipos[7] = {'I', 'J', 'L', 'O', 'S', 'T', 'Z'};
+    int indice = rand() % 7;
+    return tipos[indice];
+}
+
+void limparBuffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF) { }
+}
